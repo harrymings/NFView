@@ -1,14 +1,18 @@
 """Cli functionality for NFView."""
 from __future__ import annotations
 import argparse
+import base64
+import io
 import json
 import sys
+import tempfile
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog
+from PIL import Image, ImageTk
 
 
-from nfview.resources import CONFIG_FILENAME
+from nfview.resources import APP_ICON_ICO, APP_ICON_PNG, APP_NAME, CONFIG_FILENAME
 from nfview.ui.app import PreviewApp
 from nfview.platform import configure_display
 from nfview.exporting import copy_ranked_images, export_report
@@ -60,8 +64,25 @@ def main() -> int:
     if (not args.source.is_dir() or (not explicit_folder and not settings.get("last_folder"))) and not (args.copy_to or args.stack_to):
         chooser = tk.Tk()
         chooser.withdraw()
-        folder = filedialog.askdirectory(title="Choose your photo folder")
-        chooser.destroy()
+        chooser.title(APP_NAME)
+        # Native dialogs inherit the owner's default icon, including on first launch.
+        chooser_icon = ImageTk.PhotoImage(
+            Image.open(io.BytesIO(base64.b64decode(APP_ICON_PNG))), master=chooser
+        )
+        chooser.iconphoto(True, chooser_icon)
+        if sys.platform == "win32":
+            icon_path = Path(tempfile.gettempdir()) / "nfview-app-v3.ico"
+            try:
+                icon_path.write_bytes(base64.b64decode(APP_ICON_ICO))
+                chooser.iconbitmap(default=str(icon_path))
+                chooser.iconbitmap(str(icon_path))
+            except (OSError, tk.TclError):
+                pass
+        chooser.update_idletasks()
+        try:
+            folder = filedialog.askdirectory(parent=chooser, title="Choose your photo folder")
+        finally:
+            chooser.destroy()
         if not folder:
             return 0
         args.source = Path(folder)

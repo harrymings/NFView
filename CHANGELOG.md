@@ -14,3 +14,7 @@
 - Reorganised the application into focused engine and UI modules.
 - Moved embedded branding into packaged resource files.
 - Preserved viewer controls, cached browsing and Nikon RAW preview behaviour.
+
+## Beta 3
+
+- Apply the NFView logo to the initial photo-folder chooser.
