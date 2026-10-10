@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+build/
+dist/
+*.exe
+*.zip
+.image-screener-*
+*.before-*
+.vscode/
+.DS_Store
