@@ -4,12 +4,19 @@ import queue
 import time
 import os
 from tkinter import messagebox
+from nfview.platform import native_menu_is_active
 
 
 
 class LifecycleMixin:
     def _poll(self):
         if self.closed:
+            return
+        # Windows runs Tk callbacks inside its native popup menu loop. Painting
+        # scan progress underneath that popup corrupts/flashes its text. Keep
+        # workers running, but apply their queued UI updates after dismissal.
+        if native_menu_is_active():
+            self.root.after(40, self._poll)
             return
         deadline = time.monotonic()+0.012
         dirty = False
@@ -54,13 +61,15 @@ class LifecycleMixin:
                 self._status("Ready")
             elif kind == "thumb_cached":
                 result,key,preview=data
-                self.thumb_pending.discard(key)
+                self.thumb_pending.pop(key, None)
                 self.thumb_cache[key]=preview
+                if len(self.thumb_cache) > 256:
+                    del self.thumb_cache[next(iter(self.thumb_cache))]
                 if self.thumb_keys.get(result.path)==key:
                     self._set_thumbnail(result,preview,self.thumbnail_generation)
             elif kind == "thumb_failed":
                 result,key,error=data
-                self.thumb_pending.discard(key)
+                self.thumb_pending.pop(key, None)
                 self.thumb_errors[key]=error
                 if self.thumb_keys.get(result.path)==key:
                     self._set_thumbnail_error(result,self.thumbnail_generation)
@@ -117,14 +126,7 @@ class LifecycleMixin:
                 self.progress.configure(maximum=max(1,total),value=done)
                 self._status(f"Stacking {done}/{total}: {detail}")
         if dirty:
-            self._sync_controls()
-        if dirty:
-            visible = self._browse_results()
-            added = [r for r in visible if r.path not in self.thumbnail_labels][:24]
-            if added:
-                self._populate_grid(added)
-                self._load_thumbnails(added,self.thumbnail_generation)
-                self._schedule_arrange()
+            self._reorder_cards()
         self.root.after(20,self._poll)
 
     def _status(self, state):

@@ -26,6 +26,7 @@ class InteractionsMixin:
         if self.view_var.get()=="grid":
             return
         self.filmstrip_visible=not self.filmstrip_visible
+        self.content.columnconfigure(0,minsize=round(220*self.display_scale) if self.filmstrip_visible else 0)
         if self.filmstrip_visible:
             self.film_panel.grid()
             self.root.after_idle(self._ensure_visible)
@@ -196,7 +197,7 @@ class InteractionsMixin:
         if self.zoom_job:
             self.root.after_cancel(self.zoom_job);self.zoom_job=None
         self.last_fit=self._preview_fit_scale()
-        target=0.5/self.last_fit
+        target=min(self._zoom_limits()[1], self.zoom*1.5)
         ratio=target/self.zoom
         ax=event.x-self.main_view.winfo_width()/2;ay=event.y-self.main_view.winfo_height()/2
         self.offset=(ax-(ax-self.offset[0])*ratio,ay-(ay-self.offset[1])*ratio)

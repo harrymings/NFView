@@ -7,6 +7,29 @@ import sys
 from pathlib import Path
 
 
+def native_menu_is_active():
+    """Whether this UI thread is inside a Windows native menu tracking loop."""
+    if sys.platform != "win32":
+        return False
+
+    from ctypes import wintypes
+
+    class GUIThreadInfo(ctypes.Structure):
+        _fields_ = [
+            ("cbSize", wintypes.DWORD), ("flags", wintypes.DWORD),
+            ("hwndActive", wintypes.HWND), ("hwndFocus", wintypes.HWND),
+            ("hwndCapture", wintypes.HWND), ("hwndMenuOwner", wintypes.HWND),
+            ("hwndMoveSize", wintypes.HWND), ("hwndCaret", wintypes.HWND),
+            ("rcCaret", wintypes.RECT),
+        ]
+
+    info = GUIThreadInfo(cbSize=ctypes.sizeof(GUIThreadInfo))
+    thread_id = ctypes.windll.kernel32.GetCurrentThreadId()
+    if not ctypes.windll.user32.GetGUIThreadInfo(thread_id, ctypes.byref(info)):
+        return False
+    # GUI_INMENUMODE | GUI_SYSTEMMENUMODE | GUI_POPUPMENUMODE
+    return bool(info.flags & 0x1c)
+
 
 def configure_display():
     """Prevent Windows from bitmap-stretching the Tk window on scaled displays."""

@@ -19,7 +19,7 @@ class DialogsMixin:
     def _mouse_preferences(self):
         dialog=tk.Toplevel(self.root)
         dialog.title("Settings")
-        dialog.configure(bg="#1c222c")
+        dialog.configure(bg="#1b1e20")
         dialog.transient(self.root)
         dialog.resizable(False,False)
         body=ttk.Frame(dialog,padding=18)
@@ -27,7 +27,7 @@ class DialogsMixin:
         values={}
         choices=(("Left-drag tool","left_tool",("zoom","pan")),
                  ("Right button","right_action",("Pan + click to fit","Pan only","Fit only")),
-                 ("Double left-click","double_click",("50% zoom","Fit","No action")))
+                 ("Double left-click","double_click",("Zoom in","Fit","No action")))
         for row,(label,key,options) in enumerate(choices):
             ttk.Label(body,text=label).grid(row=row,column=0,sticky="w",padx=(0,18),pady=7)
             values[key]=tk.StringVar(value=self.preview_tool.get() if key=="left_tool" else self.mouse_settings[key])
@@ -121,7 +121,7 @@ class DialogsMixin:
         dialog=tk.Toplevel(self.root)
         self.help_window=dialog
         dialog.title("NFView — User guide")
-        dialog.configure(bg="#1c222c")
+        dialog.configure(bg="#1b1e20")
         dialog.transient(self.root)
         width=min(round(760*self.display_scale),dialog.winfo_screenwidth()-80)
         height=min(round(560*self.display_scale),dialog.winfo_screenheight()-100)
@@ -143,7 +143,7 @@ class DialogsMixin:
                 ("Deleting a photo","Select a photo and press Delete. Confirm to move its original to the Recycle Bin. Unlock protected photos first.")],
             "Controls": [
                 ("Zoom and pan","Choose Zoom or Pan beside the zoom controls. Zoom: left-drag down to enlarge, up to reduce. Pan: left-drag to move an enlarged photo. Release keeps the view."),
-                ("Default mouse controls","Wheel zooms toward the pointer. Double-click jumps to 50%. Middle- or right-drag pans. A right-click without dragging fits the photo."),
+                ("Default mouse controls","Wheel zooms toward the pointer. Double-click enlarges the current view by 50%. Middle- or right-drag pans. A right-click without dragging fits the photo."),
                 ("Make it yours","Edit → Settings changes mouse controls and the application used to open originals. Photoshop is the default."),
                 ("Adjust your workspace","Drag the divider beside Photo details to resize it. Hide the browser with Hide previews. View → Panels restores hidden panels.")],
             "Shortcuts": [
@@ -168,7 +168,7 @@ class DialogsMixin:
                 ttk.Button(page,text="GitHub · harrymings ↗",command=lambda:webbrowser.open("https://github.com/harrymings")).pack(anchor="w",pady=(0,10))
             scroll=ttk.Scrollbar(page)
             scroll.pack(side="right",fill="y")
-            text=tk.Text(page,wrap="word",bg="#1c222c",fg="#e7ecf4",font=("Segoe UI",12),relief="flat",highlightthickness=0,padx=6,pady=6,spacing1=3,spacing3=9,yscrollcommand=scroll.set,cursor="arrow")
+            text=tk.Text(page,wrap="word",bg="#1b1e20",fg="#e7ecf4",font=("Segoe UI",12),relief="flat",highlightthickness=0,padx=6,pady=6,spacing1=3,spacing3=9,yscrollcommand=scroll.set,cursor="arrow")
             text.pack(fill="both",expand=True);scroll.configure(command=text.yview)
             text.tag_configure("heading",font=("Segoe UI",13,"bold"),foreground="#88c5ff",spacing1=12,spacing3=5)
             for heading,body in sections:

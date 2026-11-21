@@ -60,7 +60,10 @@ class ScanningMixin:
         self._end_busy()
         self.page_index = 0
         self._refresh_grid()
-        item = next((r for r in results if not r.error), None)
+        initial_photo = getattr(self, "initial_photo", None)
+        self.initial_photo = None
+        item = next((r for r in results if r.path.resolve() == initial_photo), None)
+        item = item or next((r for r in results if not r.error), None)
         if item:
             self._select(item)
         self._load_sort_dates(preload=True)

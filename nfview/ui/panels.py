@@ -10,6 +10,8 @@ class PanelsMixin:
         width=self.content.winfo_width()
         if self.details_visible and self.view_var.get()!="grid":
             width-=round(self.details_width*self.display_scale)
+        if self.view_var.get()!="grid" and self.filmstrip_visible:
+            width-=round(220*self.display_scale)
         needed=2*max(views.winfo_reqwidth(),tools.winfo_reqwidth())+navigation.winfo_reqwidth()+20
         self.preview_tools.columnconfigure(0,weight=1 if width>=needed else 0,uniform="viewer-sides" if width>=needed else "")
         self.preview_tools.columnconfigure(2,weight=1 if width>=needed else 0,uniform="viewer-sides" if width>=needed else "")
@@ -40,7 +42,7 @@ class PanelsMixin:
         width=max(round(220*self.display_scale),min(width,round(available*.6)))
         self.details_width=round(width/self.display_scale)
         self.details.configure(width=width)
-        self.content.columnconfigure(1,weight=0,minsize=width)
+        self.content.columnconfigure(2,weight=0,minsize=width)
         self._layout_viewer_toolbar()
 
     def _toggle_details(self):
@@ -48,12 +50,12 @@ class PanelsMixin:
             return
         self.details_visible=not self.details_visible
         if self.details_visible:
-            self.content.columnconfigure(1,weight=0,minsize=round(self.details_width*self.display_scale))
+            self.content.columnconfigure(2,weight=0,minsize=round(self.details_width*self.display_scale))
             self.details.grid()
             self.details_button.configure(text="Hide details")
         else:
             self.details.grid_remove()
-            self.content.columnconfigure(1,weight=0,minsize=0)
+            self.content.columnconfigure(2,weight=0,minsize=0)
             self.details_button.configure(text="Show details")
         self._layout_viewer_toolbar()
 

@@ -18,7 +18,7 @@ from PIL import Image, ImageTk
 
 from nfview.resources import APP_ICON_ICO, APP_ICON_PNG, APP_NAME, CONFIG_FILENAME
 from nfview.models import ImageScore
-from nfview.platform import configure_display, open_in_photoshop
+from nfview.platform import configure_display, open_in_photoshop, native_menu_is_active
 from nfview.exporting import copy_ranked_images, export_report
 from nfview.scanning import folder_signature
 from nfview.stacking import stack_images
@@ -26,7 +26,7 @@ from nfview.stacking import stack_images
 from nfview.ui.layout import LayoutMixin
 from nfview.ui.collections import CollectionsMixin
 from nfview.ui.viewer import ViewerMixin
-from nfview.ui.browser import BrowserMixin
+from nfview.ui.browser import BrowserMixin, ThumbnailCard
 from nfview.ui.scanning import ScanningMixin
 from nfview.ui.interactions import InteractionsMixin
 from nfview.ui.dialogs import DialogsMixin
@@ -60,8 +60,10 @@ class PreviewApp(LayoutMixin, CollectionsMixin, ViewerMixin, BrowserMixin, Scann
         self.sort_task=None
         self.sort_token=0
         self.ranking_sessions={}
-        self.mouse_settings={"left_tool":"zoom","right_action":"Pan + click to fit","double_click":"50% zoom","wheel_zoom":True}
+        self.mouse_settings={"left_tool":"zoom","right_action":"Pan + click to fit","double_click":"Zoom in","wheel_zoom":True}
         self.mouse_settings.update(self.settings.get("mouse_controls",{}))
+        if self.mouse_settings.get("double_click")=="50% zoom":
+            self.mouse_settings["double_click"]="Zoom in"
         self.editor_path=str(self.settings.get("editor_path",""))
         self.details_visible=True
         self.details_width=max(220,int(self.settings.get("details_width",300)))
@@ -75,7 +77,6 @@ class PreviewApp(LayoutMixin, CollectionsMixin, ViewerMixin, BrowserMixin, Scann
         self.zoom_job = None
         self.zoom_target=1.0
         self.film_visibility_job=None
-        self.visible_film_windows=set()
         self.drag_render_job=None
         self.last_fit=None
         self.preview_rgb=None
@@ -106,11 +107,9 @@ class PreviewApp(LayoutMixin, CollectionsMixin, ViewerMixin, BrowserMixin, Scann
         except tk.TclError:
             self.root.geometry("1500x950")
         self.root.minsize(round(850*self.display_scale), round(600*self.display_scale))
-        self.thumbnail_images: list[ImageTk.PhotoImage] = []
-        self.thumbnail_labels: dict[Path, tk.Label] = {}
         self.thumbnail_generation = 0
         self.thumb_cache={}
-        self.thumb_pending=set()
+        self.thumb_pending={}
         self.thumb_errors={}
         self.thumb_keys={}
         self.arrange_job=None
@@ -121,7 +120,7 @@ class PreviewApp(LayoutMixin, CollectionsMixin, ViewerMixin, BrowserMixin, Scann
         self.selected_preview: ImageTk.PhotoImage | None = None
         self.selected_image: Image.Image | None = None
         self.zoom = 1.0
-        self.card_widgets: dict[Path, tuple[tk.Frame, list[tk.Widget]]] = {}
+        self.card_widgets: dict[Path, ThumbnailCard] = {}
         self.focused_only = tk.BooleanVar(value=False)
         self.show_focus=tk.BooleanVar(value=False)
         self.view_var=tk.StringVar(value="photo")
@@ -199,7 +198,7 @@ class PreviewApp(LayoutMixin, CollectionsMixin, ViewerMixin, BrowserMixin, Scann
             return
         dialog=tk.Toplevel(self.root)
         dialog.title("Copy recommended photos")
-        dialog.configure(bg="#1c222c")
+        dialog.configure(bg="#1b1e20")
         dialog.transient(self.root)
         dialog.resizable(False,False)
         body=ttk.Frame(dialog,padding=20)
@@ -314,10 +313,7 @@ class PreviewApp(LayoutMixin, CollectionsMixin, ViewerMixin, BrowserMixin, Scann
             amount = -int(event.delta / 120) if event.delta else 0
             if not amount:
                 amount = -1 if event.delta > 0 else 1
-        if self.view_var.get()=="grid":
-            self.film_canvas.yview_scroll(amount,"units")
-        else:
-            self.film_canvas.xview_scroll(amount, "units")
+        self.film_canvas.yview_scroll(amount,"units")
         return "break"
 
     def _open(self, result: ImageScore) -> None:
@@ -342,12 +338,35 @@ class PreviewApp(LayoutMixin, CollectionsMixin, ViewerMixin, BrowserMixin, Scann
             messagebox.showerror("Could not open image", str(error))
 
     def _update_info_view(self):
-        self.info_view.configure(state="normal")
-        self.info_view.delete("1.0","end")
-        self.info_view.insert("1.0",self.info_text.get())
-        self.info_view.configure(state="disabled")
+        view=self.info_view
+        view.configure(state="normal",spacing1=5,spacing3=5)
+        view.tag_configure("filename",font=("Segoe UI",12,"bold"),spacing3=14)
+        view.tag_configure("label",foreground="#afb4b5")
+        view.tag_configure("note",foreground="#afb4b5",spacing1=12)
+        view.delete("1.0","end")
+        for line in self.info_text.get().splitlines():
+            if not line.strip():continue
+            label,separator,value=line.partition(": ")
+            if separator:
+                label={"Image DateTime":"Captured","Shutter Speed":"Shutter","Focal Length":"Focal length","Recommendation":"Review","Sharpness score":"Sharpness","Dimensions":"Resolution"}.get(label,label)
+                if label=="Autofocus":
+                    view.insert("end",line+"\n","note")
+                else:
+                    view.insert("end",label+"  ","label")
+                    view.insert("end",value+"\n")
+            else:
+                view.insert("end",line+"\n","filename" if self.current and line==self.current.path.name else "note")
+        view.configure(state="disabled")
+
+    @staticmethod
+    def _set_menu_state(menu, label, *, state):
+        """Avoid invalidating an open native menu for unchanged scan updates."""
+        if str(menu.entrycget(label, "state")) != state:
+            menu.entryconfigure(label, state=state)
 
     def _sync_controls(self):
+        if native_menu_is_active():
+            return
         if not hasattr(self,"more_menu"):
             return
         recommended=sum(not r.error and r.score>=self.cutoff for r in self.results)
@@ -358,16 +377,16 @@ class PreviewApp(LayoutMixin, CollectionsMixin, ViewerMixin, BrowserMixin, Scann
             widget.state(["!disabled"] if enabled else ["disabled"])
         self.cancel_button.state(["!disabled"] if self.busy and self.scan_button.instate(["disabled"]) and not getattr(self,"operation",None) and not self.cancel_event.is_set() else ["disabled"])
         if hasattr(self,"file_menu"):
-            self.file_menu.entryconfigure("Cancel scan",state="normal" if self.busy else "disabled")
-            self.file_menu.entryconfigure("Rescan",state="disabled" if self.busy else "normal")
-            self.file_menu.entryconfigure("Open folder…",state="disabled" if self.busy else "normal")
-            self.file_menu.entryconfigure("Copy recommended photos…",state="normal" if recommended and not self.busy else "disabled")
-            self.file_menu.entryconfigure("Open in editor",state="normal" if self.current else "disabled")
-            self.file_menu.entryconfigure("Export report…",state="normal" if self.results and not self.busy else "disabled")
-        self.more_menu.entryconfigure("Ranking method",state="disabled" if self.busy else "normal")
-        self.more_menu.entryconfigure("Create stacked image…",state="normal" if self.mode=="stacking" and recommended>=2 and not self.busy else "disabled")
-        self.more_menu.entryconfigure("Export CSV / HTML report…",state="normal" if self.results and not self.busy else "disabled")
-        self.more_menu.entryconfigure("Reanalyze every photo…",state="disabled" if self.busy else "normal")
+            self._set_menu_state(self.file_menu,"Cancel scan",state="normal" if self.busy else "disabled")
+            self._set_menu_state(self.file_menu,"Rescan",state="disabled" if self.busy else "normal")
+            self._set_menu_state(self.file_menu,"Open folder…",state="disabled" if self.busy else "normal")
+            self._set_menu_state(self.file_menu,"Copy recommended photos…",state="normal" if recommended and not self.busy else "disabled")
+            self._set_menu_state(self.file_menu,"Open in editor",state="normal" if self.current else "disabled")
+            self._set_menu_state(self.file_menu,"Export report…",state="normal" if self.results and not self.busy else "disabled")
+        self._set_menu_state(self.more_menu,"Ranking method",state="disabled" if self.busy else "normal")
+        self._set_menu_state(self.more_menu,"Create stacked image…",state="normal" if self.mode=="stacking" and recommended>=2 and not self.busy else "disabled")
+        self._set_menu_state(self.more_menu,"Export CSV / HTML report…",state="normal" if self.results and not self.busy else "disabled")
+        self._set_menu_state(self.more_menu,"Reanalyze every photo…",state="disabled" if self.busy else "normal")
         gallery=self.view_var.get()=="grid"
         self.details_button.state(["disabled"] if gallery else ["!disabled"])
         for tool in self.preview_tool_buttons:

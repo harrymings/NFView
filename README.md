@@ -1,6 +1,6 @@
 # NFView
 
-NFView makes Nikon RAW (NEF) files easier and faster to view on Windows. Browse the camera’s embedded previews, zoom in to inspect a photo, and compare shots without opening a full RAW editor. Cached previews make repeat browsing and sorting quick.
+NFView makes Nikon RAW (NEF) files easier and faster to view on Windows. Browse cached thumbnails, inspect full-resolution originals, and compare shots without opening a full RAW editor. Cached previews make repeat browsing and sorting quick.
 
 Review sharpness recommendations, organise favourites and custom lists, and compare photos with a swipe divider. NFView is a preview and photo review tool; it does not develop RAW files.
 
@@ -41,7 +41,7 @@ If your Python launcher is unavailable, replace `py` with `python`.
 2. Choose a recommendation percentage and inspect the photos. **All photos** clears recommendation and list filters. Sorting and layout changes reuse previews.
 3. **Copy photos** creates a new folder containing recommended originals. It does not copy only the displayed list or favourites.
 
-Use **Zoom / Pan** to choose the left-drag tool. Default controls: drag down/up to zoom; wheel zooms toward the pointer; double-click zooms to 50%; middle/right-drag pans; a right-click without dragging fits the photo. **Edit â†’ Settings** customises mouse controls and the application used to open originals. Photoshop is the default.
+Use **Zoom / Pan** to choose the left-drag tool. Default controls: drag down/up to zoom; wheel zooms toward the pointer; double-click zooms in by 50%; middle/right-drag pans; a right-click without dragging fits the photo. **Edit â†’ Settings** customises mouse controls and the application used to open originals. Photoshop is the default.
 
 **Swipe compare (C)** pins photo A and opens B. Drag the centre divider. The small reference preview can be hidden; double-click it to centre the divider.
 
@@ -53,7 +53,7 @@ Drag the divider beside Photo details to resize it. The filmstrip can be hidden.
 
 Sharpness uses variance of the Laplacian in the existing centre region. Texture and noise can raise scores; compare similar photos. Stacking suitability uses ORB matching and a RANSAC homography. It is not a guarantee of perfect focus or alignment.
 
-RAW preview resolution is determined by the embedded camera preview. Zooming does not reveal full RAW sensor detail. Some files have black or unusable embedded previews. Recorded autofocus overlays depend on camera metadata and may be approximate or unavailable. No AI, face detection or extra scoring modes are used.
+The main viewer uses a native-size camera JPEG when it matches the RAW image dimensions; otherwise it decodes the RAW pixels. The inspector identifies the image source. If RAW decoding is unsupported, any smaller camera JPEG is explicitly labelled limited-resolution and is never upscaled to claim original detail. Choose View > Zoom > 100% (actual pixels) for pixel-level inspection. RAW decoding takes more time and memory than embedded previews. Thumbnails and sharpness ranking still use embedded previews; these scores are screening aids rather than full-resolution focus measurements. Recorded autofocus overlays depend on camera metadata and may be approximate or unavailable. No AI, face detection or extra scoring modes are used.
 
 ## Cache and settings
 

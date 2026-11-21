@@ -12,7 +12,7 @@ from tkinter import filedialog
 from PIL import Image, ImageTk
 
 
-from nfview.resources import APP_ICON_ICO, APP_ICON_PNG, APP_NAME, CONFIG_FILENAME
+from nfview.resources import APP_ICON_ICO, APP_ICON_PNG, APP_NAME, CONFIG_FILENAME, SUPPORTED_EXTENSIONS
 from nfview.ui.app import PreviewApp
 from nfview.platform import configure_display
 from nfview.exporting import copy_ranked_images, export_report
@@ -53,6 +53,13 @@ def main() -> int:
             args.keep_percent = settings.get("keep_percent",args.keep_percent)
         if not supplied("--mode"):
             args.mode = settings.get("mode",args.mode)
+    initial_photo = None
+    if explicit_folder and args.source.is_file():
+        if args.source.suffix.lower() not in SUPPORTED_EXTENSIONS:
+            print(f"Unsupported image: {args.source}", file=sys.stderr)
+            return 2
+        initial_photo = args.source.resolve()
+        args.source = initial_photo.parent
     try:
         folder_settings = json.loads((args.source/CONFIG_FILENAME).read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -114,5 +121,7 @@ def main() -> int:
                 reference_path=args.reference,
             )
             print(f"Stacked {aligned} images and rejected {rejected}; saved to {args.stack_to}")
-    PreviewApp(args.source, args.keep_percent, args.mode, args.reference).run()
+    app = PreviewApp(args.source, args.keep_percent, args.mode, args.reference)
+    app.initial_photo = initial_photo
+    app.run()
     return 0

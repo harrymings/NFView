@@ -8,7 +8,7 @@ from PIL import Image, ImageTk
 
 
 from nfview.models import ImageScore
-from nfview.imaging import preview_for
+from nfview.imaging import full_image_for
 from nfview.metadata import recorded_focus_boxes
 
 class ViewerMixin:
@@ -85,7 +85,7 @@ class ViewerMixin:
         self.zoom = 1.0
         self.offset = (0.0,0.0)
         self.main_view.delete("all")
-        self.info_text.set("Loading photo and camera settings…")
+        self.info_text.set("Decoding full-resolution photo…")
         self._status("Scanning" if self.busy else "Ready")
         self.preview_token += 1
         token = self.preview_token
@@ -93,8 +93,11 @@ class ViewerMixin:
             if token != self.preview_token or self.closed:
                 return
             try:
-                image = Image.fromarray(preview_for(result.path))
-                info = self._image_info(result)
+                pixels, source = full_image_for(result.path)
+                image = Image.fromarray(pixels)
+                info = self._image_info(result, image.size, source)
+                if token != self.preview_token or self.closed:
+                    return
                 focus=recorded_focus_boxes(result.path,image.size)
                 self.events.put(("preview", (token,result,image,info,focus)))
                 pixels=np.asarray(image.convert("RGB"))
@@ -107,18 +110,12 @@ class ViewerMixin:
             self._style_card(item)
         self.root.after_idle(self._ensure_visible)
 
-    def _image_info(self, result: ImageScore) -> str:
+    def _image_info(self, result: ImageScore, image_size=None, image_source="Unavailable") -> str:
         try:
             file_size = result.path.stat().st_size / (1024 * 1024)
-            try:
-                with Image.open(result.path) as image:
-                    dimensions = f"{image.width} x {image.height}"
-            except Exception:
-                height, width = preview_for(result.path).shape[:2]
-                dimensions = f"{width} x {height} preview"
-        except Exception:
+        except OSError:
             file_size = 0
-            dimensions = "RAW preview dimensions unavailable"
+        dimensions = f"{image_size[0]} x {image_size[1]} pixels" if image_size else "Unavailable"
         focus_state = "Recommended for stacking" if self.mode == "stacking" and not result.error and result.score >= self.cutoff else (
             "Recommended" if not result.error and result.score >= self.cutoff else "Review"
         )
@@ -126,8 +123,9 @@ class ViewerMixin:
         return (
             f"{result.path.name}\n\n"
             f"Recommendation: {focus_state}\n"
-            f"{('Alignment' if self.mode == 'stacking' else 'Sharpness')} score: {result.score:.2f}\n"
+            f"{('Alignment' if self.mode == 'stacking' else 'Sharpness')} score (preview): {result.score:.2f}\n"
             f"Dimensions: {dimensions}\n"
+            f"Image source: {image_source}\n"
             f"File size: {file_size:.1f} MB\n\n"
             f"{metadata}"
         )
@@ -171,8 +169,9 @@ class ViewerMixin:
 
     def _load_large_preview(self, result: ImageScore) -> None:
         try:
-            image = Image.fromarray(preview_for(result.path))
-            self.events.put(("preview", (self.preview_token, result, image, self._image_info(result))))
+            pixels, source = full_image_for(result.path)
+            image = Image.fromarray(pixels)
+            self.events.put(("preview", (self.preview_token, result, image, self._image_info(result, image.size, source))))
         except Exception:
             self.events.put(("preview_error", (self.preview_token,"Preview unavailable")))
 
@@ -235,7 +234,7 @@ class ViewerMixin:
         if self.show_grid.get():
             for fraction in (1/3,2/3):
                 x=left+iw*scale*fraction;y=top+ih*scale*fraction
-                for color,width in (("#080a0e",3),("#dce3eb",1)):
+                for color,width in (("#0b0d0e",3),("#dce3eb",1)):
                     self.main_view.create_line(x,max(0,top),x,min(h,top+ih*scale),fill=color,width=width,tags="photo-grid")
                     self.main_view.create_line(max(0,left),y,min(w,left+iw*scale),y,fill=color,width=width,tags="photo-grid")
         self.main_view.delete("compare-overlay")
@@ -244,21 +243,21 @@ class ViewerMixin:
             self.main_view.create_line(boundary,0,boundary,h,fill="#ecf4ff",width=2,tags="compare-overlay")
             self.main_view.create_text(14,14,anchor="nw",text="A · "+self.compare_name,fill="white",tags="compare-overlay")
             self.main_view.create_text(w-14,14,anchor="ne",text="B · "+self.current.path.name,fill="white",tags="compare-overlay")
-            self.main_view.create_rectangle(boundary-10,h/2-20,boundary+10,h/2+20,fill="#2869a6",outline="white",tags="compare-overlay")
+            self.main_view.create_rectangle(boundary-10,h/2-20,boundary+10,h/2+20,fill="#c4d5ad",outline="white",tags="compare-overlay")
 
     def _draw_histogram(self):
         if not hasattr(self,"histogram"):return
         canvas=self.histogram
         canvas.delete("all")
         w=max(100,canvas.winfo_width());h=max(60,canvas.winfo_height())
-        left,right,top,bottom=8,w-8,24,h-18
+        left,right,top,bottom=12,w-12,26,h-22
         if self.histogram_data is None:
             canvas.create_text(w/2,h/2,text=self.histogram_message,fill="#8490a1")
             return
         maximum=max(1,max(int(channel.max()) for channel in self.histogram_data))
         for fraction in (.25,.5,.75):
             y=bottom-(bottom-top)*fraction
-            canvas.create_line(left,y,right,y,fill="#28303c")
+            canvas.create_line(left,y,right,y,fill="#303638")
         for index,(values,color,label) in enumerate(zip(self.histogram_data,("#ef6464","#63c685","#5c9aee"),("R","G","B"))):
             points=[]
             for value,count in enumerate(values):
@@ -266,8 +265,8 @@ class ViewerMixin:
             canvas.create_line(*points,fill=color,width=1.5)
             canvas.create_text(left+index*36,10,text=label,anchor="w",fill=color)
         canvas.create_line(left,bottom,right,bottom,fill="#596474")
-        canvas.create_text(left,h-7,text="0",anchor="w",fill="#8490a1",font=("Segoe UI",8))
-        canvas.create_text(right,h-7,text="255",anchor="e",fill="#8490a1",font=("Segoe UI",8))
+        canvas.create_text(left,h-7,text="Shadows",anchor="w",fill="#8490a1",font=("Segoe UI",8))
+        canvas.create_text(right,h-7,text="Highlights",anchor="e",fill="#8490a1",font=("Segoe UI",8))
 
     def _show_preview_error(self) -> None:
         self.histogram_data=None

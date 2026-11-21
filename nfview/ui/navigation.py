@@ -38,25 +38,19 @@ class NavigationMixin:
         self._select(items[index])
 
     def _ensure_visible(self):
-        entry=self.card_widgets.get(self.current.path) if self.current else None
-        if not entry:
+        index = self.browser_indices.get(self.current.path) if self.current else None
+        if index is None:
             return
-        card=entry[0]
-        if self.view_var.get()=="grid":
-            start=self.film_canvas.canvasy(0)
-            top,bottom=card.winfo_y(),card.winfo_y()+card.winfo_height()
-            height=max(1,self.grid.winfo_reqheight())
-            visible=self.film_canvas.winfo_height()
-            if top<start:self.film_canvas.yview_moveto(top/height)
-            elif bottom>start+visible:self.film_canvas.yview_moveto(max(0,bottom-visible)/height)
-        else:
-            left=self.photo_positions.get(self.current.path,0)
-            right=left+card.winfo_reqwidth()
-            width=max(1,len(self.card_widgets)*(round(204*self.display_scale)+8))
-            start=self.film_canvas.canvasx(0)
-            viewport=self.film_canvas.winfo_width()
-            if left<start:self.film_canvas.xview_moveto(left/width)
-            elif right>start+viewport:self.film_canvas.xview_moveto(max(0,right-viewport)/width)
+        top = (index // self.browser_columns) * self.card_row_height
+        bottom = top + self.card_row_height
+        rows = (len(self.browser_items) + self.browser_columns - 1) // self.browser_columns
+        height = rows * self.card_row_height
+        start = self.film_canvas.canvasy(0)
+        viewport = self.film_canvas.winfo_height()
+        if top < start:
+            self.film_canvas.yview_moveto(top / height)
+        elif bottom > start + viewport:
+            self.film_canvas.yview_moveto(max(0, bottom - viewport) / height)
 
     def _deselect(self):
         self.preview_token += 1

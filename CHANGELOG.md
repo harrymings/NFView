@@ -18,3 +18,9 @@
 ## Beta 3
 
 - Apply the NFView logo to the initial photo-folder chooser.
+
+## Beta 4
+
+- Fixed blank and partially painted thumbnail rows during fast scrolling in large folders. Scrolling now prioritises the current viewport.
+- Added full-size Nikon inspection with the pixel source shown in Photo details.
+- Updated the photo sidebar, double-click zoom and opening an image directly from Explorer.

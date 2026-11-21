@@ -43,7 +43,7 @@ class CollectionsMixin:
             self.collection.set("All photos")
         self.list_menu.delete(0,"end")
         self.list_menu.add_command(label="Create list…",command=self._create_list)
-        add=tk.Menu(self.list_menu,tearoff=False,bg="#1c222c",fg="#e7ecf4")
+        add=tk.Menu(self.list_menu,tearoff=False,bg="#1b1e20",fg="#e7ecf4")
         for name in sorted(self.custom_lists,key=str.casefold):
             add.add_command(label=name,command=lambda name=name:self._add_to_list(name))
         self.list_menu.add_cascade(label="Add current photo to",menu=add,state="normal" if self.custom_lists else "disabled")
@@ -55,7 +55,7 @@ class CollectionsMixin:
     def _review_changed(self):
         self._save_review_state()
         self._update_collections()
-        if {r.path for r in self._browse_results()}==set(self.card_widgets):
+        if {r.path for r in self._browse_results()}==self.browser_indices.keys():
             for result in self.results:self._style_card(result)
             self._reorder_cards()
         else:

@@ -2,7 +2,7 @@
 
 Open `LaunchNFView.cmd` or `dist\NFView.exe`.
 
-- Left-button drag down/up: zoom in/out. Release keeps the zoom. Double-click jumps to 50% of the embedded preview pixels.
+- Left-button drag down/up: zoom in/out. Release keeps the zoom. Double-click enlarges the current view by 50%. View > Zoom > 100% (actual pixels) shows native image pixels.
 - Middle-button drag: pan. Right-click or `0`: fit the photo.
 - Wheel or `+` / `-`: zoom. Arrow keys: previous/next photo.
 - `P`: toggle favourite. `L`: lock/unlock review choices. `C`: start/end comparison.
@@ -20,12 +20,12 @@ Favourites, locks, and lists are saved in `.image-screener-review.json` in the p
 
 **Copy photos** still copies the recommended originals, using the recommendation percentage and existing scoring method. It does not copy only the displayed list. Optional CSV/HTML reports remain available under File or Tools.
 
-Nikon focus overlays show recorded autofocus metadata when supported; grid positions can be approximate. RAW previews retain the camera's embedded resolution. A black embedded preview cannot reveal detail merely by zooming.
+Nikon focus overlays show recorded autofocus metadata when supported; grid positions can be approximate. The main viewer decodes the full-resolution original. Thumbnails and sharpness scores still use embedded previews; use 100% (actual pixels) to inspect focus. Full RAW decoding takes more time and memory.
 
 The right-hand details panel includes an **RGB histogram** of the displayed preview. The left side represents dark pixels and the right side bright pixels; red, green and blue curves show each colour channel. This display does not change scores. Folder opening and scan actions are in the File menu (Ctrl+O and S), without duplicate toolbar buttons.
 
 Drag the divider at the left edge of the details panel to adjust its width. The chosen width is remembered across launches and when hiding or showing details.
-Use the Zoom and Pan buttons beside the zoom controls to choose the left-drag tool. Zoom adjusts magnification vertically; Pan moves the enlarged image. Middle-drag always pans, right-click fits, and double-click zooms to 50%.
+Use the Zoom and Pan buttons beside the zoom controls to choose the left-drag tool. Zoom adjusts magnification vertically; Pan moves the enlarged image. Middle-drag always pans, right-click fits, and double-click zooms in by 50%.
 Mouse controls can be customised under Edit → Settings. By default, right-drag pans and a right-click without dragging fits the photo. Choose Pan only to disable right-click reset, or Fit only for the old behaviour. You can also change the left-drag tool, double-click action and wheel zoom. Settings are saved.
 Swipe compare (C) pins the first photo and opens a second. Drag the centre divider to compare them. Use Edit → Delete selected photo… or Delete to move the selected original to the Recycle Bin after confirmation. Locked photos must be unlocked first. Restore deleted originals through Windows Recycle Bin; review-list memberships removed during deletion must be re-added manually.
 The Grid toggle adds rule-of-thirds guides to the main photo. During swipe comparison, reference A appears in a small bottom-right preview. Double-click it to centre the divider on the photo. Its × button hides it; View → Reference preview shows it again. Locked thumbnails show a small padlock in the top-right corner.

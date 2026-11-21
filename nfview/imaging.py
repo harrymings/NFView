@@ -39,6 +39,38 @@ def preview_for(path: Path) -> np.ndarray:
             image = raw.postprocess(half_size=True, use_camera_wb=True, no_auto_bright=True)
             return image
 
+def full_image_for(path: Path) -> tuple[np.ndarray, str]:
+    """Return inspection pixels and their source, without resizing camera JPEGs."""
+    if path.suffix.lower() not in RAW_EXTENSIONS:
+        with Image.open(path) as image:
+            return np.array(ImageOps.exif_transpose(image).convert("RGB")), "Full-resolution original"
+    if rawpy is None:
+        raise RuntimeError("RAW support is unavailable. Install rawpy to view RAW files.")
+    with rawpy.imread(str(path)) as raw:
+        embedded = None
+        try:
+            thumbnail = raw.extract_thumb()
+            if thumbnail.format == rawpy.ThumbFormat.JPEG:
+                with Image.open(io.BytesIO(thumbnail.data)) as image:
+                    embedded = np.array(ImageOps.exif_transpose(image).convert("RGB"))
+            elif thumbnail.format == rawpy.ThumbFormat.BITMAP:
+                embedded = thumbnail.data
+        except (rawpy.LibRawError, OSError, ValueError):
+            pass
+        sizes = raw.sizes
+        width = getattr(sizes, "crop_width", 0) or sizes.width
+        height = getattr(sizes, "crop_height", 0) or sizes.height
+        if embedded is not None and sorted(embedded.shape[:2]) == sorted((height, width)):
+            return embedded, "Full-size camera JPEG (embedded in RAW)"
+        try:
+            return raw.postprocess(half_size=False, use_camera_wb=True,
+                                   no_auto_bright=True, output_bps=8), "Full-resolution RAW decode"
+        except rawpy.LibRawError as error:
+            if embedded is not None:
+                return embedded, "Limited-resolution camera JPEG; RAW decoding unavailable"
+            raise RuntimeError("RAW decoding failed and no camera JPEG is available. " + str(error)) from error
+
+
 def sharpness_score(path: Path) -> float:
     image = preview_for(path)
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
